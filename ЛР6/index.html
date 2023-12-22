@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>ЛР 6</title>
+</head>
+<div class="row just">
+    <form class="col">
+        <h3>Общие начальные значения</h3>
+        <div class="row">
+            <span>Функция: </span>
+            <span class="inp">x * cos(x) - x</span>
+        </div>
+        <div class="row">
+            <label for="a" style="margin-right: 3px;">Значение a:</label>
+            <input type="number" value="2" id="a" class="inp" />
+        </div>
+        <div class="row">
+            <label for="b" style="margin-right: 2px;">Значение b:</label>
+            <input type="number" value="18" id="b" class="inp" />
+        </div>
+        <div class="row">
+            <label for="m">Значение m:</label>
+            <input type="number" value="30" id="m" class="inp" />
+        </div>
+        <button type="button" id="btn0">Построить функцию</button>
+    </form>
+    <form id="form2" style="display: none;">
+        <h3>Ввод начального приближения</h3>
+        <fieldset>
+            <legend>Способ задания приближения:</legend>
+
+            <div>
+                <input type="radio" id="a-b" name="drone" value="a-b" checked />
+                <label for="a-b">Через a и b</label>
+            </div>
+
+            <div>
+                <input type="radio" id="x0-h" name="drone" value="x0-h" />
+                <label for="x0-h">Через x0 и h</label>
+            </div>
+        </fieldset>
+        <div class="row">
+            <label for="a" style="margin-right: 3px;" id="k1-lab">Значение a:</label>
+            <input type="number" value="2" id="k1" class="inp" />
+        </div>
+        <div class="row">
+            <label for="b" style="margin-right: 2px;" id="k2-lab">Значение b:</label>
+            <input type="number" value="18" id="k2" class="inp" />
+        </div>
+        <button type="button" id="btn">Посчитать минимум</button>
+    </form>
+</div>
+<hr />
+<div class="row">
+    <div>
+        <h3>Значения функции</h3>
+        <table id="table"></table>
+    </div>
+    <div class="chart-cover">
+        <canvas id="chart"></canvas>
+    </div>
+</div>
+<hr />
+<div>
+    <h3>Найденный минимум</h3>
+    <div id="min"></div>
+</div>
+<hr />
+<div class="row">
+    <div>
+        <h3>Зависимость числа итераций от эпсилон</h3>
+        <table id="table-2"></table>
+    </div>
+    <div class="chart-cover">
+        <canvas id="chart-2"></canvas>
+    </div>
+</div>
+
+<body>
+
+</body>
+
+<style>
+    .row {
+        display: flex;
+        align-items: center;
+    }
+
+    .col {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .just {
+        justify-content: space-evenly;
+        width: 100%;
+    }
+
+    .inp {
+        max-width: 200px;
+        margin: 10px 0 10px 1%;
+    }
+
+    button {
+        max-width: 150px;
+    }
+
+    td,
+    th {
+        border: 1px solid black;
+    }
+
+    .chart-cover {
+        width: 100%;
+    }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    var funcIterations = 0;
+    var derivativeIterations = 0;
+
+    const func = (x, calcIterations = true) => {
+        if (calcIterations) funcIterations++;
+        return x * Math.cos(x) - x;
+    };
+    const funcDerivative = (x, calcIterations = true) => {//mathematically
+        if (calcIterations) derivativeIterations++;
+        return (Math.cos(x) - 1) + x * (-Math.sin(x));
+    };
+    // const funcDerivative2 = (x) => (func(x + 0.00001) - func(x)) / 0.00001; //programmatically
+
+    const mp3 = (x1 = 0, x2 = 0, eps = 0) => { //calculation itself
+        let d1 = funcDerivative(x1);
+        let d2 = funcDerivative(x2);
+        if ((d2 - d1) / (x2 - x1) <= 0) {
+            throw 'Начальное приближение выбрано неправильно';
+        }
+        let y1 = func(x1);
+        let y2 = func(x2);
+
+        let zm = eps;
+
+        do {
+            let z1 = x1 - x2;
+            let p = (d1 - d2 - 2 * (y1 - y2 - d2 * z1) / z1) / (z1 * z1);
+            let q = (d2 - d1 + 3 * (y1 - y2 - d2 * z1) / z1) / z1;
+            let r = d2;
+            zm = (-q + Math.sqrt(q * q - 3 * p * r)) / (3 * p);
+
+            x1 = x2;
+            y1 = y2;
+            d1 = d2;
+
+            x2 = x1 + zm;
+
+            y2 = func(x2);
+            d2 = funcDerivative(x2);
+        } while (Math.abs(zm) >= eps);
+        return x2 + zm;
+    }
+
+    const fillTable = (id = '', headers = [], rows = [[]]) => {
+        const table = document.getElementById(id);
+        let htmlToInsert = '<thead><tr>';
+        headers.forEach(he => htmlToInsert += `<th>${he}</th>`);
+        htmlToInsert += '</tr></thead><tbody>';
+        rows.forEach(row => {
+            htmlToInsert += '<tr>';
+            row.forEach(cell => htmlToInsert += `<td>${cell}</td>`);
+            htmlToInsert += '</tr>';
+        });
+        htmlToInsert += '</tbody>';
+        table.innerHTML = htmlToInsert;
+    }
+
+    const extractCommonSourceValues = () => {
+        const a = +document.getElementById('a').value;
+        const b = +document.getElementById('b').value;
+        const m = +document.getElementById('m').value;
+
+        return { a, b, m };
+    }
+
+    var existingCharts = {};
+
+    const buildChart = (chartId = '', rawData = [{ label: '', values: [{ x: 0, y: 0 }] }]) => {
+        const ctx = document.getElementById(chartId);
+        existingCharts?.[chartId]?.destroy();
+
+        existingCharts[chartId] = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: rawData[0].values.map(dat => dat.x),
+                datasets: rawData.map(dt => ({
+                    label: dt.label,
+                    data: dt.values.map(val => val.y),
+                    borderWidth: 1
+                }))
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    const calcFunction = (a, b, m) => {
+        return (new Array(m)).fill(0).map((_, i) => {
+            const x = a + (b - a) * i / (m - 1);
+            const y = func(x, false);
+            return { i, x, y }
+        });
+    }
+
+    const onClick0 = () => {//building function values table and chart
+        const { a, b, m } = extractCommonSourceValues();
+        const funcValues = calcFunction(a, b, m);
+        fillTable('table', ['№', 'X', 'f(X)'], funcValues.map(fV => [fV.i + 1, fV.x.toFixed(2), fV.y.toFixed(2)]));
+        buildChart('chart', [{ label: 'f(X)', values: funcValues }]);
+        document.getElementById('form2').style.display = 'block';
+    }
+
+    var useAB = true;
+
+    const getX12 = () => {
+        const k1 = +document.getElementById('k1').value;
+        const k2 = +document.getElementById('k2').value;
+
+        if (useAB) return { x1: k1, x2: k2 };
+
+        const d1 = funcDerivative(k1, false);
+        return { x1: k1, x2: d1 < 0 ? k1 - k2 : k1 + k2 };
+    }
+
+    const epsValues = [
+        { label: '10^0', value: 1 },
+        { label: '10^-1', value: 0.1 },
+        { label: '10^-2', value: 0.01 },
+        { label: '10^-3', value: 0.001 },
+        { label: '10^-4', value: 0.0001 },
+        { label: '10^-5', value: 0.00001 },
+        { label: '10^-6', value: 0.000001 },
+        { label: '10^-7', value: 0.0000001 },
+        { label: '10^-8', value: 0.00000001 },
+        { label: '10^-9', value: 0.000000001 },
+        { label: '10^-10', value: 0.00000000001 },
+        { label: '10^-11', value: 0.000000000001 },
+        { label: '10^-12', value: 0.0000000000001 },
+        { label: '10^-13', value: 0.00000000000001 },
+        { label: '10^-14', value: 0.000000000000001 },
+        { label: '10^-15', value: 0.0000000000000001 }
+    ];
+
+    const onClick = () => { //main calculation on click
+        const { x1, x2 } = getX12();
+        var min = 999;
+        try {
+            const data = epsValues.map((epsV, i) => {
+                funcIterations = 0;
+                derivativeIterations = 0;
+                const minT = mp3(x1, x2, epsV.value);
+                min = (minT < min) ? minT : min;
+                return {
+                    i,
+                    funcN: funcIterations,
+                    derivN: derivativeIterations,
+                    x: epsV.label
+                }
+            });
+            document.getElementById('min').innerHTML = min.toFixed(8);
+            fillTable('table-2', ['№', 'eps', 'Вычислений функции', 'Вычислений производной'],
+                data.map(d => [d.i + 1, d.x, d.funcN, d.derivN]));
+            buildChart('chart-2', [
+                { label: 'Вычислений функции', values: data.reverse().map(d => ({ x: d.x, y: d.funcN })) },
+                { label: 'Вычислений производной', values: data.map(d => ({ x: d.x, y: d.derivN })) }
+            ]);
+        } catch (ex) {
+            alert(ex);
+        }
+    }
+    document.getElementById('btn').onclick = onClick;
+    document.getElementById('btn0').onclick = onClick0;
+    document.getElementById('a-b').addEventListener('click', (e) => {
+        const checked = e.target.checked;
+        if (checked) {
+            useAB = true;
+            document.getElementById('k1-lab').innerHTML = 'Значение a:';
+            document.getElementById('k2-lab').innerHTML = 'Значение b:';
+        }
+    });
+    document.getElementById('x0-h').addEventListener('click', (e) => {
+        const checked = e.target.checked;
+        if (checked) {
+            useAB = false;
+            document.getElementById('k1-lab').innerHTML = 'Значение x0:';
+            document.getElementById('k2-lab').innerHTML = 'Значение h:';
+        }
+    });
+
+</script>
+
+</html>
+
+</html>

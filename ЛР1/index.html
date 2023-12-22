@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>ЛР 2</title>
+    <!--link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@300;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="static/css/styles.css" type="text/css">
+    <link rel="stylesheet" href="font-awesome-4.7.0/css/font-awesome.min.css"> <!--Либа с иконками-->
+</head>
+
+<body class="col">
+    <form class="row just">
+        <div>Исходные данные:</div>
+        <div id="a" class="col">
+            <div class="row">
+                <input type="number" id="a00" value="-4.88" class="inp" />
+                <input type="number" id="a01" value="1" class="inp" />
+                <input type="number" id="a02" value="0" class="inp" />
+                <input type="number" id="a03" value="0" class="inp" />
+                <input type="number" id="a04" value="0" class="inp" />
+            </div>
+            <div class="row">
+                <input type="number" id="a10" value="1" class="inp" />
+                <input type="number" id="a11" value="-2" class="inp" />
+                <input type="number" id="a12" value="1" class="inp" />
+                <input type="number" id="a13" value="0" class="inp" />
+                <input type="number" id="a14" value="0" class="inp" />
+            </div>
+            <div class="row">
+                <input type="number" id="a20" value="0" class="inp" />
+                <input type="number" id="a21" value="1" class="inp" />
+                <input type="number" id="a22" value="-2" class="inp" />
+                <input type="number" id="a23" value="1" class="inp" />
+                <input type="number" id="a24" value="0" class="inp" />
+            </div>
+            <div class="row">
+                <input type="number" id="a30" value="0" class="inp" />
+                <input type="number" id="a31" value="0" class="inp" />
+                <input type="number" id="a32" value="1" class="inp" />
+                <input type="number" id="a33" value="-2" class="inp" />
+                <input type="number" id="a34" value="1" class="inp" />
+            </div>
+            <div class="row">
+                <input type="number" id="a40" value="0" class="inp" />
+                <input type="number" id="a41" value="0" class="inp" />
+                <input type="number" id="a42" value="0" class="inp" />
+                <input type="number" id="a43" value="1" class="inp" />
+                <input type="number" id="a44" value="-4.88" class="inp" />
+            </div>
+        </div>
+        <span>*</span>
+        <div class="col">
+            <span>x1</span>
+            <span>x2</span>
+            <span>x3</span>
+            <span>x4</span>
+            <span>x5</span>
+        </div>
+        <span>=</span>
+        <div id="b" class="col">
+            <input type="number" id="b0" value="0" class="inp" />
+            <input type="number" id="b1" value="-8" class="inp" />
+            <input type="number" id="b2" value="-8" class="inp" />
+            <input type="number" id="b3" value="-8" class="inp" />
+            <input type="number" id="b4" value="0" class="inp" />
+        </div>
+        <button type="button" id="btn">Решить СЛАУ</button>
+    </form>
+    <br />
+    <div class="row">
+        <span>Матрица S:</span>
+        <div id="s" class="col"></div>
+    </div>
+    <br />
+    <div class="row">
+        <span>Вектор y:</span>
+        <div id="y" class="col ml"></div>
+    </div>
+    <br />
+    <div class="row">
+        <span>В результате x:</span>
+        <div id="x" class="col ml-1"></div>
+    </div>
+    <br />
+    <div class="row">
+        <span>Невязка:</span>
+        <span id="disl" class="ml"></span>
+    </div>
+</body>
+
+<style>
+    .row {
+        display: flex;
+    }
+
+    .just{
+        justify-content: space-evenly;
+        width: 100%;
+    }
+
+    .col {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .inp {
+        max-width: 50px;
+    }
+
+    .ml{
+        margin-left: 45px;
+    }
+
+    .ml-1{
+        margin-left: 5px;
+    }
+</style>
+
+<script>
+    const mq = (a = [[]], b = [], n = 0) => { //main algorythm of MQ method
+        const d = (new Array(n)).fill(0);
+        const s = [];
+        for (let j = 0; j < n; j++)
+            s.push((new Array(n)).fill(0));
+        let delta = 0;
+        for (let k = 0; k < n; k++) {
+            delta = a[k][k];
+            if (k != 0) {
+                for (let i = 0; i <= k - 1; i++) {
+                    delta = delta - d[i] * s[i][k] * s[i][k]
+                }
+            }
+            d[k] = Math.sign(delta);
+            s[k][k] = Math.sqrt(Math.abs(delta));
+            for (let j = k + 1; j < n; j++) {
+                delta = a[k][j];
+                if (k != 0) {
+                    for (let i = 0; i <= k - 1; i++) {
+                        delta = delta - d[i] * s[i][k] * s[i][j]
+                    }
+                }
+                s[k][j] = delta / (s[k][k] * d[k]);
+            }
+        }
+
+        const y = (new Array(n)).fill(0);
+        y[0] = b[0] / (s[0][0] * d[0]);
+        for (let i = 1; i < n; i++) {
+            delta = b[i];
+            for (let k = 0; k <= i - 1; k++) {
+                delta = delta - d[k] * y[k] * s[k][i];
+            }
+            y[i] = delta / (s[i][i] * d[i]);
+        }
+
+        const x = (new Array(n)).fill(0);
+        x[n - 1] = y[n - 1] / s[n - 1][n - 1];
+
+        for (let i = n - 2; i >= 0; i--) {
+            delta = y[i];
+            for (let k = i + 1; k < n; k++) {
+                delta = delta - x[k] * s[i][k];
+            }
+            x[i] = delta / s[i][i];
+        }
+        return { x, s, y };
+    }
+
+    const countDislocation = (x = [], a = [[]], b = []) => { //all according to formulas from methoda
+        const allDeltas = b.map((bVal, i) => {
+            const sum = x.map((xVal, j) => xVal * a[i][j])
+                .reduce((acc, val) => acc + val, 0);
+            return Math.abs(bVal - sum);
+        });
+        return allDeltas.reduce((max, cur) => max > cur ? max : cur, undefined);
+    }
+
+    const extractSourceValues = () => {
+        const a = [];
+        for (let i = 0; i < 5; i++) {
+            const row = [];
+            for (let j = 0; j < 5; j++) {
+                const val = document.getElementById(`a${i}${j}`).value;
+                row.push(+val);
+            }
+            a.push(row);
+        }
+        const b = [];
+        for (let j = 0; j < 5; j++) {
+            const val = document.getElementById(`b${j}`).value;
+            b.push(+val);
+        }
+        return { a, b };
+    }
+
+    const fillResults = (xArr = [], sArr = [[]], yArr = [], dislocationVal = 0) => {
+        const s = document.getElementById('s');
+        let htmlToInsert = '';
+        sArr.forEach((row, i) => {
+            htmlToInsert += '<div class="row just" style="min-width: 350px">';
+            row.forEach((cell, j) => {
+                htmlToInsert += `<span>${cell.toFixed(2)}</span>`;
+            })
+            htmlToInsert += '</div>';
+        });
+        s.innerHTML += htmlToInsert;
+
+        const y = document.getElementById('y');
+        htmlToInsert = '';
+        yArr.forEach((cell, j) => {
+            htmlToInsert += `<span>${cell.toFixed(2)}</span>`;
+        });
+        y.innerHTML += htmlToInsert;
+
+        const x = document.getElementById('x');
+        htmlToInsert = '';
+        xArr.forEach((cell, j) => {
+            htmlToInsert += `<span>${cell.toFixed(2)}</span>`;
+        });
+        x.innerHTML += htmlToInsert;
+
+        const disl = document.getElementById('disl');
+        disl.innerHTML += dislocationVal.toFixed(2);
+    }
+
+    const onClick = (e) => {
+        e.preventDefault();
+        const source = extractSourceValues();
+        const res = mq(source.a, source.b, 5);
+        const disl = countDislocation(res.x, source.a, source.b);
+        fillResults(res.x, res.s, res.y, disl);
+    }
+    document.getElementById('btn').onclick = onClick;
+
+</script>
+
+</html>

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>ЛР 3</title>
+</head>
+
+<body>
+    <form class="col">
+        <div class="row">
+            <span>Функция: </span>
+            <span class="inp">0.1 * x^3 + x^2 - 10 * sin(x)</span>
+        </div>
+        <div class="row">
+            <label for="a" style="margin-right: 3px;">Значение a:</label>
+            <input type="number" value="-4" id="a" class="inp"/>
+        </div>
+        <div class="row">
+            <label for="b" style="margin-right: 2px;">Значение b:</label>
+            <input type="number" value="2" id="b" class="inp"/>
+        </div>
+        <div class="row">
+            <label for="m">Значение m:</label>
+            <input type="number" value="11" id="m" class="inp"/>
+        </div>
+        <button type="button" id="btn">Аппроксимировать</button>
+    </form>
+    <hr />
+    <div>
+        <h3>Значения функции и полиномы</h3>
+        <table id="table-m"></table>
+    </div>
+    <hr />
+    <div>
+        <h3>Сравнение функции с апроксимацией</h3>
+        <table id="table-21"></table>
+    </div>
+    <div>
+        <canvas id="chart"></canvas>
+    </div>
+</body>
+
+<style>
+    .row {
+        display: flex;
+        align-items: center;
+    }
+
+    .col {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .inp{
+        max-width: 200px;
+        margin: 10px 0 10px 1%;
+    }
+
+    #btn{
+        max-width: 150px;
+    }
+
+    td,
+    th {
+        border: 1px solid black;
+    }
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const funcForInterpol = (x) => 0.1 * (x * x * x) + (x * x) - 10 * Math.sin(x);
+
+    const pnl = (xArr = [], yArr = [], xT = 0) => { //calculating polynom value in point
+        let i = 2;
+        for (; xT > xArr[i]; i++) { }
+        const { y0, x1, d1 } = pn1(xArr, yArr, i);
+        return y0 + (xT - x1) * d1;
+    }
+
+    const pn1 = (xArr, yArr, i) => { //calculating pn polynom koefficients in linear case
+        const y0 = yArr[i - 1];
+        const x1 = xArr[i - 1];
+        const d1 = (yArr[i] - yArr[i - 1]) / (xArr[i] - xArr[i - 1]);
+        return { y0, x1, d1 };
+    }
+
+    // const pn = (xArr, yArr, n) => { //calculating pn value in common case (not used, may have problems)
+    //     const d = (new Array(n)).fill(0);
+    //     const res = (new Array(n)).fill(0);
+    //     for (let i = 0; i < n; i++) {
+    //         d[i] = yArr[i];
+    //     }
+    //     let p = [1];
+    //     res[0] = yArr[0];
+    //     for (let k = 0; k < n - 1; k++) {
+    //         for (let i = 0; i <= n - k; i++) {
+    //             d[i] = (d[i] - d[i + 1]) / (xArr[i] - xArr[i + k + 1]);
+    //         }
+    //         p = multiplyEx(p, [-xArr[k], 1]);
+    //         res = sumExp(res, p.map(el => el * d[k]));
+    //     }
+    //     return res;
+    // }
+
+    // const sumExp = (exp1, exp2) => { //sum of polynoms (not used, may have problems)
+    //     return exp1.map((el, i) => el + (exp2?.[i] ?? 0));
+    // }
+
+    // const multiplyEx = (exp1, exp2) => { //multiplication of polynoms (not used, may have problems)
+    //     const res = new Array(exp1.length + exp2.length - 1);
+    //     for (let i = 0; i < res.length; i++) {
+    //         res[i] = 0;
+    //         for (let j = 0; j < exp1.length; j++) {
+    //             const k = i - j;
+    //             if (!(exp2?.[k])) continue;
+    //             res[i] += exp1[j] * exp2[k];
+    //         }
+    //     }
+    //     let lenToTrim = 0;
+    //     for (let i = res.length - 1; i >= 0; i--) {
+    //         if (res[i] == 0) lenToTrim++;
+    //         else break;
+    //     }
+    //     const trimmedRes = new Array(res.length - lenToTrim).fill(0);
+    //     res.forEach((el, i) => {
+    //         if (el != 0) trimmedRes[i] = el;
+    //     });
+    //     return trimmedRes;
+    // }
+
+    const fillTable = (id = '', headers = [], rows = [[]]) => {
+        const table = document.getElementById(id);
+        let htmlToInsert = '<thead><tr>';
+        headers.forEach(he => htmlToInsert += `<th>${he}</th>`);
+        htmlToInsert += '</tr></thead><tbody>';
+        rows.forEach(row => {
+            htmlToInsert += '<tr>';
+            row.forEach(cell => htmlToInsert += `<td>${cell}</td>`);
+            htmlToInsert += '</tr>';
+        });
+        htmlToInsert += '</tbody>';
+        table.innerHTML = htmlToInsert;
+    }
+
+    const extractSourceValues = () => {
+        const a = +document.getElementById('a').value;
+        const b = +document.getElementById('b').value;
+        const m = +document.getElementById('m').value;
+
+        return { a, b, m };
+    }
+
+    var existingChart = undefined;
+
+    const buildChart = (rawData = [{xT: 0, f_Xt: 0, pnl_Xt: 0}]) => {
+        const ctx = document.getElementById('chart');
+        existingChart?.destroy();
+
+        existingChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: rawData.map(dat => dat.xT),
+                datasets: [{
+                    label: 'f(xT)',
+                    data: rawData.map(dat => dat.f_Xt),
+                    borderWidth: 1
+                }, {
+                    label: 'ф(xT, c)',
+                    data: rawData.map(dat => dat.pnl_Xt),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
+        });
+    }
+
+    const formatPolynom = ({ y0, x1, d1 }) =>
+        `${y0.toFixed(2)} + (xT - (${x1.toFixed(2)}) * (${d1.toFixed(2)}))`;
+
+    const onClick = () => { //main action on cell click
+        const { a, b, m } = extractSourceValues();
+        const xStep = (b - a) / (m - 1);
+        const xArr = [];
+        const yArr = [];
+        for (let x = a; x <= b + 0.005; x += xStep) {
+            xArr.push(x);
+            yArr.push(funcForInterpol(x));
+        }
+
+        const dataForFirstTable = xArr.map((x, i) => [
+            i + 1,
+            x.toFixed(2),
+            yArr[i].toFixed(2),
+            i == 0 ? '-' : formatPolynom(pn1(xArr, yArr, i))
+        ]);
+        fillTable('table-m', ['№', 'X', 'f(X)', 'N1(X)'], dataForFirstTable);
+
+        const dataForComparison = (new Array(21)).fill(0).map((_, j) => {
+            const xT = a + (b - a) * (j / 20);
+            if (xT < a || xT > b) throw `xT = ${xT} за пределами таблицы [${a}, ${b}]`;
+
+            const f_Xt = funcForInterpol(xT);
+            const pnl_Xt = pnl(xArr, yArr, xT);
+            const d = f_Xt - pnl_Xt;
+            return {
+                table: [j + 1, xT.toFixed(2), f_Xt.toFixed(2), pnl_Xt.toFixed(2), d.toFixed(2)],
+                chart: {xT, f_Xt, pnl_Xt}
+            };
+        });
+        fillTable('table-21', ['№', 'X', 'f(X)', 'PNL(X)', 'Погрешность (абсолютная)'], dataForComparison.map(dt => dt.table));
+        buildChart(dataForComparison.map(dt => dt.chart));
+    }
+    document.getElementById('btn').onclick = onClick;
+
+</script>
+
+</html>
